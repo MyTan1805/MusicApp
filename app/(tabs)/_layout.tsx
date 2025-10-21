@@ -1,59 +1,105 @@
+// File: app/(tabs)/_layout.tsx
+
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { Tabs } from 'expo-router';
+// Chỉ import các icon cần thiết
+import { HeartIcon, HomeIcon, ListMusicIcon } from 'lucide-react-native';
 import React from 'react';
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { Link, Tabs } from 'expo-router';
-import { Pressable } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-import Colors from '@/constants/Colors';
-import { useColorScheme } from '@/components/useColorScheme';
-import { useClientOnlyValue } from '@/components/useClientOnlyValue';
+// Giả sử bạn có file định nghĩa màu
+const COLORS = { 
+    active: '#A7F3D0', 
+    textMuted: '#9CA3AF' 
+};
 
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-  name: React.ComponentProps<typeof FontAwesome>['name'];
-  color: string;
-}) {
-  return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+export const TAB_BAR_HEIGHT = 60;
+export const TAB_BAR_BOTTOM_MARGIN = Platform.OS === 'ios' ? 30 : 20;
+
+function MyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
+    return (
+        <View style={styles.tabBarContainer}>
+            {state.routes.map((route, index) => {
+                const isFocused = state.index === index;
+                
+                // iconMap GIỜ CHỈ CÓ 3 KEY
+                const iconMap: { [key: string]: any } = {
+                    'index': HomeIcon,
+                    'favorites': HeartIcon,
+                    'playlists': ListMusicIcon,
+                };
+                
+                const IconComponent = iconMap[route.name];
+
+                if (!IconComponent) {
+                    return null;
+                }
+
+                const onPress = () => {
+                    const event = navigation.emit({
+                        type: 'tabPress',
+                        target: route.key,
+                        canPreventDefault: true,
+                    });
+
+                    if (!isFocused && !event.defaultPrevented) {
+                        navigation.navigate(route.name, route.params);
+                    }
+                };
+
+                return (
+                    <Pressable
+                        key={route.key}
+                        onPress={onPress}
+                        style={styles.tabButton}
+                    >
+                        <IconComponent
+                            color={isFocused ? COLORS.active : COLORS.textMuted}
+                            size={28}
+                        />
+                    </Pressable>
+                );
+            })}
+        </View>
+    );
 }
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+const styles = StyleSheet.create({
+    tabBarContainer: {
+        position: 'absolute',
+        bottom: TAB_BAR_BOTTOM_MARGIN,
+        height: TAB_BAR_HEIGHT,
+        alignSelf: 'center',
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundColor: '#111827',
+        borderRadius: 999,
+        paddingHorizontal: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 5 },
+        shadowOpacity: 0.2,
+        shadowRadius: 5,
+        elevation: 5,
+    },
+    tabButton: {
+        padding: 12,
+        marginHorizontal: 4,
+    }
+});
 
+export default function TabLayout() {
   return (
     <Tabs
+      tabBar={(props) => <MyTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        // Disable the static render of the header on web
-        // to prevent a hydration error in React Navigation v6.
-        headerShown: useClientOnlyValue(false, true),
-      }}>
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Tab One',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-          headerRight: () => (
-            <Link href="/modal" asChild>
-              <Pressable>
-                {({ pressed }) => (
-                  <FontAwesome
-                    name="info-circle"
-                    size={25}
-                    color={Colors[colorScheme ?? 'light'].text}
-                    style={{ marginRight: 15, opacity: pressed ? 0.5 : 1 }}
-                  />
-                )}
-              </Pressable>
-            </Link>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="two"
-        options={{
-          title: 'Tab Two',
-          tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
-        }}
-      />
+        headerShown: false,
+      }}
+    >
+      {/* CHỈ CÓ 3 MÀN HÌNH */}
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="favorites" />
+      <Tabs.Screen name="playlists" />
     </Tabs>
   );
 }
