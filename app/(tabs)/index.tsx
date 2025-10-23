@@ -22,6 +22,7 @@ import SongItem from '../../components/SongItem';
 import SuggestionCarousel from '../../components/SuggestionCarousel';
 import { TRACKS, Track } from '../../constants/tracks';
 import { Playlist, usePlayer } from '../../contexts/PlayerContext';
+import { useAppToast } from '../../hooks/useAppToast';
 
 const COLORS = {
   primary: '#1DB954',
@@ -65,8 +66,10 @@ export default function HomeScreen() {
     playTrack, currentTrack, history, playlists, addTrackToPlaylist,
     isDownloaded, downloadTrack, deleteDownload
   } = usePlayer();
+  const { showToast } = useAppToast();
   const [searchQuery, setSearchQuery] = useState('');
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [showActionsheet, setShowActionsheet] = useState(false); 
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
@@ -133,9 +136,20 @@ export default function HomeScreen() {
     setShowPlaylistModal(true);
   };
 
-  const handleSelectPlaylist = (playlistId: string) => {
-    if (selectedTrack) addTrackToPlaylist(playlistId, selectedTrack.id);
-    setShowPlaylistModal(false);
+const handleSelectPlaylist = (playlistId: string) => {
+    if (selectedTrack) {
+      addTrackToPlaylist(playlistId, selectedTrack.id);
+      
+      // TÌM TÊN PLAYLIST ĐỂ HIỂN THỊ TRONG THÔNG BÁO
+      const playlistName = playlists.find(p => p.id === playlistId)?.name;
+      
+      // GỌI TOAST
+      showToast({
+        title: "Đã thêm vào playlist",
+        description: `"${selectedTrack.title}" đã được thêm vào "${playlistName || ''}"`
+      });
+    }
+    setShowActionsheet(false);
     setSelectedTrack(null);
   };
 

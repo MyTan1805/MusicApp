@@ -48,7 +48,7 @@ export default function HistoryScreen() {
  
   return (
     // 4. BỌC TRONG LINEARGRADIENT
-    <LinearGradient colors={['#434343', '#000000']} style={{ flex: 1 }}>
+    <LinearGradient colors={['#434343', '#000000']} locations={[0, 0.25]} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         <Stack.Screen 
           options={{ 

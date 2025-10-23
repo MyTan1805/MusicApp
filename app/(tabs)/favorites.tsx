@@ -57,7 +57,7 @@ export default function FavoritesScreen() {
   );
 
   return (
-    <LinearGradient colors={['#434343', '#000000']} style={{ flex: 1 }}>
+    <LinearGradient colors={['#434343', '#000000']} locations={[0, 0.25]} style={{ flex: 1 }}>
       <SafeAreaView style={styles.container}>
         <FlatList
           data={favoriteTracks}
