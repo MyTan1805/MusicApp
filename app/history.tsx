@@ -1,59 +1,85 @@
 // File: app/history.tsx
 
+import { Box, FlatList, Heading, Text, VStack } from '@gluestack-ui/themed';
+import { LinearGradient } from 'expo-linear-gradient'; // 1. Import Gradient
+import { Stack, useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { Box, Heading, FlatList, Text } from '@gluestack-ui/themed';
 import { SafeAreaView, StyleSheet } from 'react-native';
-import { Stack } from 'expo-router';
 
-import { usePlayer } from '../contexts/PlayerContext';
-import { TRACKS, Track } from '../constants/tracks';
-import SongItem from '../components/SongItem';
 import MiniPlayer from '../components/MiniPlayer';
+import SongItem from '../components/SongItem';
+import { TRACKS, Track } from '../constants/tracks';
+import { usePlayer } from '../contexts/PlayerContext';
 
 export default function HistoryScreen() {
   const { history, playTrack, currentTrack } = usePlayer();
+  const router = useRouter();
 
-  // Chuyển đổi mảng ID trong history thành mảng các object Track đầy đủ
-  // Đồng thời giữ nguyên thứ tự của history (bài nghe gần nhất ở trên cùng)
   const historyTracks = useMemo(() => {
-    // Tạo một map để tra cứu track object bằng ID cho nhanh
     const tracksMap = new Map(TRACKS.map(track => [track.id, track]));
-    // Map qua mảng history và lấy ra track object tương ứng
     return history.map(trackId => tracksMap.get(trackId)).filter(Boolean) as Track[];
   }, [history]);
 
   const handleSongPress = (track: Track) => {
-    // Khi phát nhạc từ History, playlist sẽ chính là danh sách History
-    playTrack(track, historyTracks);
+      playTrack(track, historyTracks);
+      router.push('/player');
   };
 
-  return (
-    <Box flex={1} bg="$backgroundLight50">
-      <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ title: 'Lịch sử' }} />
-        <Box padding="$4">
-          <Heading size="xl">Lịch sử nghe nhạc</Heading>
-        </Box>
+  // 2. TẠO HÀM MỚI: PHÁT TẤT CẢ
+  const handlePlayAll = () => {
+    if (historyTracks.length > 0) {
+      playTrack(historyTracks[0], historyTracks);
+    }
+  };
 
+  // 3. TẠO COMPONENT HEADER CHO FLATLIST
+  const ListHeader = () => (
+    <Box p="$4" pt="$16">
+      <Heading size="2xl" color="white" bold>
+        Lịch sử nghe nhạc
+      </Heading>
+      
+      {historyTracks.length > 0 && (
+        <Text color="$trueGray400" size="sm">{historyTracks.length} bài hát</Text>
+      )}
+
+    </Box>
+  );
+ 
+  return (
+    // 4. BỌC TRONG LINEARGRADIENT
+    <LinearGradient colors={['#434343', '#000000']} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'Lịch sử', 
+            headerShown: false // Ẩn header để tự custom
+          }} 
+        />
+        
         <FlatList
           data={historyTracks}
+          ListHeaderComponent={ListHeader} // 5. SỬ DỤNG HEADER MỚI
           renderItem={({ item }) => {
             const track = item as Track;
             return <SongItem track={track} onPress={() => handleSongPress(track)} />;
           }}
           keyExtractor={(item, index) => `${(item as Track).id}-${index}`}
           ListEmptyComponent={
-            <Box flex={1} alignItems="center" justifyContent="center" mt="$16">
-              <Text>Lịch sử nghe nhạc của bạn trống.</Text>
-            </Box>
+            // 6. CẢI THIỆN THÔNG BÁO TRỐNG
+            <VStack flex={1} space="md" alignItems="center" justifyContent="center" mt="$16">
+              <Heading color="white">Chưa có gì ở đây</Heading>
+              <Text color="$trueGray400">Hãy bắt đầu nghe một bài hát.</Text>
+            </VStack>
           }
-          contentContainerStyle={{ flexGrow: 1, paddingBottom: currentTrack ? 80 : 20 }}
+          contentContainerStyle={{ flexGrow: 1, paddingBottom: currentTrack ? 160 : 80 }}
         />
 
         {currentTrack && <MiniPlayer />}
       </SafeAreaView>
-    </Box>
+    </LinearGradient>
   );
 }
 
-const styles = StyleSheet.create({ container: { flex: 1 } });
+// 7. LÀM TRONG SUỐT SAFEAREAVIEW
+const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: 'transparent' } });

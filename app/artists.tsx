@@ -1,9 +1,9 @@
 // File: app/artists.tsx
 
-import React, { useMemo } from 'react';
-import { Box, Heading, FlatList, Text, Pressable } from '@gluestack-ui/themed';
-import { SafeAreaView, StyleSheet } from 'react-native';
+import { Box, FlatList, Heading, Pressable, Text } from '@gluestack-ui/themed';
 import { Stack, useRouter } from 'expo-router';
+import React, { useMemo } from 'react';
+import { SafeAreaView, StyleSheet } from 'react-native';
 import { TRACKS } from '../constants/tracks';
 
 // Định nghĩa một kiểu cho Ca sĩ để dễ quản lý

@@ -1,16 +1,16 @@
 // File: contexts/PlayerContext.tsx
 
-import React, {
-  createContext,
-  useState,
-  useContext,
-  ReactNode,
-  useEffect,
-  useRef,
-} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Track, TRACKS } from '../constants/tracks';
 import { Audio, AVPlaybackStatus } from 'expo-av';
+import React, {
+    createContext,
+    ReactNode,
+    useContext,
+    useEffect,
+    useRef,
+    useState,
+} from 'react';
+import { Track } from '../constants/tracks';
 // SỬA CÁCH IMPORT CHO FILE SYSTEM
 import { createDownloadResumable, deleteAsync, documentDirectory } from 'expo-file-system/legacy';
 
@@ -57,6 +57,7 @@ interface PlayerContextType {
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
 export const PlayerProvider = ({ children }: { children: ReactNode }) => {
+    const [allTracks, setAllTracks] = useState<Track[]>([]);
     const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
     const [currentPlaylist, setCurrentPlaylist] = useState<Track[]>([]);
     const [isPlaying, setIsPlaying] = useState(false);
@@ -113,33 +114,25 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     }, [volume]);
     
     const downloadTrack = async (track: Track) => {
-        if (!track.downloadUrl || downloadedTracks[track.id]) return;
+        if (!track.downloadUrl) { throw new Error('No download URL for this track.'); }
+        if (downloadedTracks[track.id]) { return; }
+        if (!documentDirectory) { throw new Error('Document directory is not available.'); }
         
         const fileUri = documentDirectory + `${track.id}.mp3`;
         console.log(`Downloading ${track.title} to ${fileUri}`);
-        
-        try {
-            const downloadResumable = createDownloadResumable(
-                track.downloadUrl,
-                fileUri,
-                {}
-            );
-            
-            // Gán kết quả vào một biến `result`
-            const result = await downloadResumable.downloadAsync();
-            
-            // KIỂM TRA `result` VÀ `result.uri` TRƯỚC KHI SỬ DỤNG
-            if (result && result.uri) {
-                console.log('Download finished:', result.uri);
-                const newDownloads = { ...downloadedTracks, [track.id]: result.uri };
-                setDownloadedTracks(newDownloads);
-                await AsyncStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(newDownloads));
-            } else {
-                console.error('Download result is undefined or missing URI.');
-            }
 
-        } catch (e) { 
-            console.error('Failed to download track.', e); 
+        const downloadResumable = createDownloadResumable(track.downloadUrl, fileUri, {});
+        const result = await downloadResumable.downloadAsync();
+        
+        if (result && result.uri) {
+            console.log('Download successful:', result.uri);
+            setDownloadedTracks(prev => {
+                const newDownloads = { ...prev, [track.id]: result.uri };
+                AsyncStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(newDownloads));
+                return newDownloads;
+            });
+        } else {
+            throw new Error('Download failed: Result is undefined.');
         }
     };
 
@@ -148,15 +141,40 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         if (!fileUri) return;
         try {
             await deleteAsync(fileUri, { idempotent: true });
-            const newDownloads = { ...downloadedTracks };
-            delete newDownloads[trackId];
-            setDownloadedTracks(newDownloads);
-            await AsyncStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(newDownloads));
+            console.log('Deleted file:', fileUri);
+            setDownloadedTracks(prev => {
+                const newDownloads = { ...prev };
+                delete newDownloads[trackId];
+                AsyncStorage.setItem(DOWNLOADS_STORAGE_KEY, JSON.stringify(newDownloads));
+                return newDownloads;
+            });
         } catch (e) { console.error('Failed to delete download.', e); }
     };
   
     const isDownloaded = (trackId: string) => !!downloadedTracks[trackId];
 
+    const playTrack = async (track: Track, playlist: Track[] = allTracks) => {
+        if (soundObjectRef.current) await soundObjectRef.current.unloadAsync();
+        
+        const localUri = downloadedTracks[track.id];
+        const source = localUri ? { uri: localUri } : track.url;
+
+        console.log(`Playing track: ${track.title}. Source:`, localUri ? `LOCAL FILE (${localUri})` : 'REMOTE/BUNDLED');
+
+        if (JSON.stringify(playlist) !== JSON.stringify(currentPlaylist)) {
+            setIsShuffle(false);
+            setShuffledPlaylist([]);
+        }
+
+        try {
+            const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true, volume: volume });
+            soundObjectRef.current = sound;
+            setCurrentTrack(track);
+            setCurrentPlaylist(playlist);
+            addToHistory(track.id);
+        } catch (error) { console.error('Error playing track:', error); }
+    };
+    
     const addToHistory = async (trackId: string) => {
         setHistory(prevHistory => {
         // 1. Xóa bài hát này nếu đã tồn tại trong lịch sử (để đưa nó lên đầu)
@@ -173,23 +191,6 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         
         return limitedHistory;
         });
-    };
-
-    const playTrack = async (track: Track, playlist: Track[] = TRACKS) => {
-        if (soundObjectRef.current) await soundObjectRef.current.unloadAsync();
-        const localUri = downloadedTracks[track.id];
-        const source = localUri ? { uri: localUri } : track.url;
-        if (JSON.stringify(playlist) !== JSON.stringify(currentPlaylist)) {
-            setIsShuffle(false);
-            setShuffledPlaylist([]);
-        }
-        try {
-            const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true, volume: volume });
-            soundObjectRef.current = sound;
-            setCurrentTrack(track);
-            setCurrentPlaylist(playlist);
-            addToHistory(track.id);
-        } catch (error) { console.error('Error playing track:', error); }
     };
 
     const playNext = () => {
@@ -351,9 +352,7 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
         downloadedTracks, downloadTrack, deleteDownload, isDownloaded, history,
     };
 
-    return (
-        <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>
-    );
+    return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 };
 
 export const usePlayer = () => {

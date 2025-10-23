@@ -1,18 +1,18 @@
 // File: app/[artist].tsx
 
+import { Box, FlatList, Heading } from '@gluestack-ui/themed';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo } from 'react';
-import { Box, Heading, FlatList } from '@gluestack-ui/themed';
 import { SafeAreaView, StyleSheet } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
 
-import { usePlayer } from '../contexts/PlayerContext';
-import { TRACKS, Track } from '../constants/tracks';
-import SongItem from '../components/SongItem';
 import MiniPlayer from '../components/MiniPlayer';
+import SongItem from '../components/SongItem';
+import { TRACKS, Track } from '../constants/tracks';
+import { usePlayer } from '../contexts/PlayerContext';
 
 export default function ArtistDetailScreen() {
   const { artist } = useLocalSearchParams<{ artist: string }>();
-  // decodeURIComponent để giải mã lại tên từ URL
+  const router = useRouter();
   const artistName = useMemo(() => artist ? decodeURIComponent(artist) : '', [artist]);
   
   const { playTrack, currentTrack } = usePlayer();
@@ -23,7 +23,8 @@ export default function ArtistDetailScreen() {
   }, [artistName]);
 
   const handleSongPress = (track: Track) => {
-    playTrack(track, artistTracks);
+      playTrack(track, artistTracks);
+      router.push('/player');
   };
 
   return (

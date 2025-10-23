@@ -5,6 +5,7 @@ import { useRouter } from 'expo-router';
 import { CheckCircleIcon, DownloadIcon, HistoryIcon, PlayIcon, PlusIcon, SearchIcon, XIcon } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
@@ -13,7 +14,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 
 import MiniPlayer from '../../components/MiniPlayer';
@@ -67,6 +68,7 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
   const featuredPlaylist = useMemo(() => (playlists.length > 0 ? playlists[0] : null), [playlists]);
   
@@ -74,6 +76,21 @@ export default function HomeScreen() {
     if (!featuredPlaylist) return [];
     return TRACKS.filter(track => featuredPlaylist.tracks.includes(track.id));
   }, [featuredPlaylist]);
+
+  const handleDownload = async (track: Track) => {
+    if (isDownloaded(track.id)) {
+        deleteDownload(track.id);
+        return;
+    }
+    setDownloadingId(track.id); // Bắt đầu loading
+    try {
+        await downloadTrack(track);
+    } catch (error) {
+        console.error("Download failed in UI:", error);
+    } finally {
+        setDownloadingId(null); // Kết thúc loading
+    }
+  };
 
   const handlePlayFeaturedPlaylist = () => {
     if (featuredPlaylistTracks.length > 0) {
@@ -134,12 +151,23 @@ export default function HomeScreen() {
         case 'track':
             const track = item.trackData;
             const isTrackDownloaded = isDownloaded(track.id);
+            const isCurrentlyDownloading = downloadingId === track.id; // Kiểm tra
+
             const DownloadButton = (
-                <Pressable onPress={() => isTrackDownloaded ? deleteDownload(track.id) : downloadTrack(track)} style={{ padding: 8 }}>
-                    {isTrackDownloaded ? <CheckCircleIcon color={COLORS.primary} /> : <DownloadIcon color={COLORS.textMuted} />}
+                <Pressable onPress={() => handleDownload(track)} style={{ padding: 8 }} disabled={isCurrentlyDownloading}>
+                    {isCurrentlyDownloading ? (
+                        <ActivityIndicator color={COLORS.textMuted} /> // 4. HIỂN THỊ SPINNER
+                    ) : isTrackDownloaded ? (
+                        <CheckCircleIcon color={COLORS.primary} />
+                    ) : (
+                        <DownloadIcon color={COLORS.textMuted} />
+                    )}
                 </Pressable>
             );
-            return <SongItem track={track} onPress={() => playTrack(track, trendingTracks)} onLongPress={() => handleLongPressSong(track)} downloadComponent={DownloadButton} />;
+            return <SongItem track={track} onPress={() => {
+                playTrack(track, trendingTracks);
+                router.push('/player');
+            }} onLongPress={() => handleLongPressSong(track)} downloadComponent={DownloadButton} />;
         default: return null;
     }
   };
@@ -147,12 +175,25 @@ export default function HomeScreen() {
   const renderSearchItem = ({ item }: { item: Track }) => {
       const track = item;
       const isTrackDownloaded = isDownloaded(track.id);
+      const isCurrentlyDownloading = downloadingId === track.id; // Kiểm tra
+
       const DownloadButton = (
-          <Pressable onPress={() => isTrackDownloaded ? deleteDownload(track.id) : downloadTrack(track)} style={{ padding: 8 }}>
-              {isTrackDownloaded ? <CheckCircleIcon color={COLORS.primary} /> : <DownloadIcon color={COLORS.textMuted} />}
+          <Pressable onPress={() => handleDownload(track)} style={{ padding: 8 }} disabled={isCurrentlyDownloading}>
+              {isCurrentlyDownloading ? (
+                  <ActivityIndicator color={COLORS.textMuted} /> // 4. HIỂN THỊ SPINNER
+              ) : isTrackDownloaded ? (
+                  <CheckCircleIcon color={COLORS.primary} />
+              ) : (
+                  <DownloadIcon color={COLORS.textMuted} />
+              )}
           </Pressable>
       );
-      return <SongItem track={track} onPress={() => playTrack(track, searchResults)} onLongPress={() => handleLongPressSong(track)} downloadComponent={DownloadButton} />;
+      return <SongItem track={track} 
+        onPress={() => {
+          playTrack(track, searchResults);
+          router.push('/player');
+      }}
+        onLongPress={() => handleLongPressSong(track)} downloadComponent={DownloadButton} />;
   }
 
   return (

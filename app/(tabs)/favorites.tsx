@@ -1,67 +1,87 @@
 // File: app/(tabs)/favorites.tsx
 
+import { Box, Button, ButtonText, FlatList, Heading, Icon, Text } from '@gluestack-ui/themed';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { PlayIcon } from 'lucide-react-native';
 import React, { useMemo } from 'react';
-import { Box, Heading, FlatList, Text } from '@gluestack-ui/themed';
 import { SafeAreaView, StyleSheet } from 'react-native';
 
-import { usePlayer } from '../../contexts/PlayerContext';
-import { TRACKS, Track } from '../../constants/tracks';
-import SongItem from '../../components/SongItem';
 import MiniPlayer from '../../components/MiniPlayer';
+import SongItem from '../../components/SongItem';
+import { TRACKS, Track } from '../../constants/tracks';
+import { usePlayer } from '../../contexts/PlayerContext';
 
 export default function FavoritesScreen() {
   const { favorites, playTrack, currentTrack } = usePlayer();
+  const router = useRouter();
 
-  // Lọc ra danh sách các bài hát yêu thích đầy đủ (object Track)
-  // useMemo giúp tối ưu, chỉ tính toán lại khi `favorites` hoặc `TRACKS` thay đổi
   const favoriteTracks = useMemo(() => {
     return TRACKS.filter(track => favorites.includes(track.id));
   }, [favorites]);
 
-  // Hàm xử lý khi nhấn vào bài hát trong danh sách yêu thích
+  const handlePlayAll = () => {
+    if (favoriteTracks.length > 0) {
+      // Phát bài đầu tiên, và đặt playlist là toàn bộ danh sách yêu thích
+      playTrack(favoriteTracks[0], favoriteTracks);
+    }
+  };
+  
   const handleSongPress = (track: Track) => {
-    // Quan trọng: Truyền vào `favoriteTracks` làm playlist hiện tại
-    playTrack(track, favoriteTracks);
+      playTrack(track, favoriteTracks);
+      router.push('/player');
   };
 
-  return (
-      <SafeAreaView style={styles.container}>
-        <Box padding="$4">
-          <Heading size="xl" color="white">Yêu thích</Heading>
-        </Box>
+  // Component Header cho FlatList
+  const ListHeader = () => (
+    <Box p="$4">
+      <Heading size="2xl" color="white">Yêu thích</Heading>
+      {favoriteTracks.length > 0 && (
+        <Text color="$trueGray400" size="sm">{favoriteTracks.length} bài hát</Text>
+      )}
 
+      {favoriteTracks.length > 0 && (
+        <Button 
+          onPress={handlePlayAll}
+          bg="$green500" 
+          borderRadius="$full" 
+          w={150} 
+          alignSelf="center" 
+          mt="$6"
+        >
+          <Icon as={PlayIcon} color="black" fill="black" mr="$2" />
+          <ButtonText color="black" fontWeight="$bold">Phát tất cả</ButtonText>
+        </Button>
+      )}
+    </Box>
+  );
+
+  return (
+    <LinearGradient colors={['#434343', '#000000']} style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
         <FlatList
           data={favoriteTracks}
+          ListHeaderComponent={ListHeader}
           renderItem={({ item }) => {
-            // Sử dụng type assertion `as Track`
-            const track = item as Track; 
-            return (
-              <SongItem track={track} onPress={() => handleSongPress(track)} />
-            );
-          }}
-          keyExtractor={(item) => {
-            // Tương tự, cũng cần assert kiểu ở đây
             const track = item as Track;
-            return track.id;
+            return <SongItem track={track} onPress={() => handleSongPress(track)} />;
           }}
+          keyExtractor={(item) => (item as Track).id}
           ListEmptyComponent={
             <Box flex={1} alignItems="center" justifyContent="center" mt="$16">
-              <Text color="white">Chưa có bài hát yêu thích nào.</Text>
+              <Text color="white">Chạm vào trái tim cạnh một bài hát</Text>
+              <Text color="$trueGray400">để thêm vào đây.</Text>
             </Box>
           }
           contentContainerStyle={{ 
-            paddingBottom: currentTrack ? 80 : 20,
+            paddingBottom: currentTrack ? 160 : 80,
             flexGrow: 1
           }}
         />
-
         {currentTrack && <MiniPlayer />}
       </SafeAreaView>
+    </LinearGradient>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
+const styles = StyleSheet.create({ container: { flex: 1, backgroundColor: 'transparent' } });
