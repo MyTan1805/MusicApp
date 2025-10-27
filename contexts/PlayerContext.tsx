@@ -154,8 +154,18 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
     const isDownloaded = (trackId: string) => !!downloadedTracks[trackId];
 
     const playTrack = async (track: Track, playlist: Track[] = allTracks) => {
-        if (soundObjectRef.current) await soundObjectRef.current.unloadAsync();
+        if (soundObjectRef.current) {
+            await soundObjectRef.current.unloadAsync();
+            soundObjectRef.current = null;
+        }
         
+        // *** BẮT ĐẦU SỬA LỖI ***
+        // 1. RESET STATE NGAY LẬP TỨC
+        console.log("Resetting position and duration for new track.");
+        setPosition(0);
+        setDuration(0);
+        // *** KẾT THÚC SỬA LỖI ***
+
         const localUri = downloadedTracks[track.id];
         const source = localUri ? { uri: localUri } : track.url;
 
@@ -170,9 +180,12 @@ export const PlayerProvider = ({ children }: { children: ReactNode }) => {
             const { sound } = await Audio.Sound.createAsync(source, { shouldPlay: true, volume: volume });
             soundObjectRef.current = sound;
             setCurrentTrack(track);
+
             setCurrentPlaylist(playlist);
             addToHistory(track.id);
-        } catch (error) { console.error('Error playing track:', error); }
+        } catch (error) { 
+            console.error('Error playing track:', error); 
+        }
     };
     
     const addToHistory = async (trackId: string) => {

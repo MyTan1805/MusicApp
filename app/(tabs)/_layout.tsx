@@ -2,12 +2,10 @@
 
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Tabs } from 'expo-router';
-// Chỉ import các icon cần thiết
 import { HeartIcon, HomeIcon, ListMusicIcon } from 'lucide-react-native';
 import React from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
-// Giả sử bạn có file định nghĩa màu
 const COLORS = { 
     active: '#A7F3D0', 
     textMuted: '#9CA3AF' 
@@ -22,7 +20,6 @@ function MyTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
             {state.routes.map((route, index) => {
                 const isFocused = state.index === index;
                 
-                // iconMap GIỜ CHỈ CÓ 3 KEY
                 const iconMap: { [key: string]: any } = {
                     'index': HomeIcon,
                     'favorites': HeartIcon,
